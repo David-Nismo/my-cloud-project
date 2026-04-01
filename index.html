@@ -3,203 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Cloud Chat - PaaS GitHub Pages</title>
+    <title>Private Cloud Chat (Firestore)</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        /* Общие стили фона */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            margin: 0;
-            color: #333;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .hidden { display: none !important; }
+        
+        .auth-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px; }
+        
+        .main-wrapper { display: flex; gap: 20px; width: 100%; max-width: 900px; height: 85vh; }
+        
+        /* Список контактов */
+        .user-list { width: 260px; background: white; border-radius: 12px; padding: 15px; overflow-y: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .user-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; border-radius: 8px; margin-bottom: 5px; transition: 0.2s; }
+        .user-item:hover { background: #f0f7ff; }
+        .user-item.active { background: #007bff; color: white; }
 
-        /* Контейнер профиля (верхний блок) */
-        .header-card {
-            background: white;
-            width: 100%;
-            max-width: 600px;
-            padding: 15px 25px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .avatar {
-            width: 45px;
-            height: 45px;
-            background-color: #4CAF50;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 20px;
-        }
-
-        .logout-link {
-            color: #ff4d4d;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        /* Основной контейнер чата */
-        .chat-container {
-            background: white;
-            width: 100%;
-            max-width: 600px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            overflow: hidden;
-            padding: 20px;
-        }
-
-        .section-title {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 15px;
-        }
-
-        /* Выбор собеседника */
-        .contact-item {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 5px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
-            margin-bottom: 15px;
-        }
-
-        .contact-avatar {
-            width: 40px;
-            height: 40px;
-            background-color: #00bcd4;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-
-        /* Окно сообщений */
-        .messages-window {
-            background-color: #f9f9f9;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            height: 300px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            overflow-y: auto;
-        }
-
-        .message {
-            max-width: 70%;
-            padding: 8px 15px;
-            border-radius: 15px;
-            font-size: 14px;
-        }
-
-        .message.received {
-            background-color: #e4e6eb;
-            align-self: flex-start;
-        }
-
-        .message.sent {
-            background-color: #007bff;
-            color: white;
-            align-self: flex-end;
-        }
-
-        /* Поле ввода */
-        .input-area {
-            margin-top: 15px;
-            display: flex;
-            gap: 10px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 10px 15px;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            outline: none;
-        }
-
-        .send-btn {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .footer-info {
-            margin-top: 15px;
-            font-size: 12px;
-            color: #999;
-            text-align: center;
-        }
+        /* Окно чата */
+        .chat-area { flex: 1; background: white; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
+        .chat-header { padding: 15px; background: #fff; border-bottom: 1px solid #eee; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .messages { flex: 1; padding: 20px; overflow-y: auto; background: #fdfdfd; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 70%; padding: 10px 14px; border-radius: 15px; font-size: 14px; line-height: 1.4; }
+        .sent { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
+        .received { align-self: flex-start; background: #e4e6eb; color: #050505; border-bottom-left-radius: 2px; }
+        .logout-btn { background: #ff4d4d; width: auto; font-size: 11px; padding: 6px 12px; }
     </style>
 </head>
 <body>
 
-    <div class="header-card">
-        <div class="user-info">
-            <div class="avatar">К</div>
-            <div>
-                <strong>Куриленко Давид</strong><br>
-                <span style="font-size: 12px; color: #666;">Группа: ПО-242</span>
+    <div id="authBlock" class="auth-container">
+        <h2 style="margin-top:0">Вход / Регистрация</h2>
+        <input type="text" id="regName" placeholder="Имя (только для регистрации)">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Пароль">
+        <button onclick="handleAuth('login')">Войти</button>
+        <button onclick="handleAuth('register')" style="background: #28a745;">Создать аккаунт</button>
+    </div>
+
+    <div id="mainBlock" class="main-wrapper hidden">
+        <div class="user-list">
+            <h3 style="font-size:16px; margin-top:0">Собеседники</h3>
+            <div id="usersContent"></div>
+        </div>
+
+        <div class="chat-area">
+            <div class="chat-header">
+                <span id="targetUserName">Выберите, кому написать</span>
+                <button class="logout-btn" onclick="firebase.auth().signOut()">Выйти</button>
+            </div>
+            <div class="messages" id="messagesBox"></div>
+            <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                <input type="text" id="msgInput" placeholder="Напишите сообщение..." style="margin:0">
+                <button onclick="sendMsg()" style="width: 70px; margin:0">Отпр.</button>
             </div>
         </div>
-        <a href="#" class="logout-link">Выйти</a>
     </div>
 
-    <div class="chat-container">
-        <div class="section-title">Выберите собеседника:</div>
-        <div class="contact-item">
-            <div class="contact-avatar">А</div>
-            <span style="font-size: 12px;">Алмас</span>
-        </div>
+    <script>
+        // ТВОИ ДАННЫЕ ИЗ FIREBASE CONSOLE
+        const firebaseConfig = {
+  apiKey: "AIzaSyDKwJFpO7azezxQasLvD4GtkUA8Vjb9JFc",
+  authDomain: "supermega-chat.firebaseapp.com",
+  projectId: "supermega-chat",
+  storageBucket: "supermega-chat.firebasestorage.app",
+  messagingSenderId: "478100974184",
+  appId: "1:478100974184:web:f804e7993e4ebedef8e9dd",
+  measurementId: "G-YJ1C22FHWS"
+};
 
-        <div class="section-title">Чат с: <strong>Алмас Дуйсенбек</strong></div>
-        
-        <div class="messages-window">
-            <div class="message received">Добрый день</div>
-            <div class="message sent">День добрый!</div>
-        </div>
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore(); // РАБОТАЕМ С FIRESTORE
 
-        <div class="input-area">
-            <input type="text" placeholder="Ваше сообщение...">
-            <button class="send-btn">➤</button>
-        </div>
+        let currentUser = null;
+        let activeRecipientId = null;
+        let unsubscribe = null; // Для остановки прослушивания старого чата
 
-        <div class="footer-info">
-            Тип облака: PaaS (GitHub Pages)
-        </div>
-    </div>
+        // 1. АВТОРИЗАЦИЯ
+        async function handleAuth(type) {
+            const mail = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            const name = document.getElementById('regName').value;
 
+            try {
+                if (type === 'register') {
+                    const res = await auth.createUserWithEmailAndPassword(mail, pass);
+                    // Сохраняем имя пользователя в Firestore
+                    await db.collection('users').doc(res.user.uid).set({
+                        name: name,
+                        email: mail,
+                        uid: res.user.uid
+                    });
+                } else {
+                    await auth.signInWithEmailAndPassword(mail, pass);
+                }
+            } catch (e) { alert(e.message); }
+        }
+
+        // 2. КОНТРОЛЬ СОСТОЯНИЯ (ВШЕЛ/ВЫШЕЛ)
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('authBlock').classList.add('hidden');
+                document.getElementById('mainBlock').classList.remove('hidden');
+                loadUsersList();
+            } else {
+                document.getElementById('authBlock').classList.remove('hidden');
+                document.getElementById('mainBlock').classList.add('hidden');
+                if (unsubscribe) unsubscribe();
+            }
+        });
+
+        // 3. ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ
+        function loadUsersList() {
+            db.collection('users').onSnapshot(snap => {
+                const container = document.getElementById('usersContent');
+                container.innerHTML = '';
+                snap.forEach(doc => {
+                    const user = doc.data();
+                    if (user.uid !== currentUser.uid) {
+                        const div = document.createElement('div');
+                        div.className = 'user-item';
+                        div.innerText = user.name || user.email;
+                        div.onclick = () => {
+                            // Выделение активного
+                            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+                            div.classList.add('active');
+                            startChat(user.uid, user.name);
+                        };
+                        container.appendChild(div);
+                    }
+                });
+            });
+        }
+
+        // 4. ЗАПУСК ПРИВАТНОГО ЧАТА
+        function startChat(recipientId, recipientName) {
+            activeRecipientId = recipientId;
+            document.getElementById('targetUserName').innerText = recipientName;
+            
+            // Генерируем ID чата (всегда один и тот же для пары людей)
+            const chatId = [currentUser.uid, recipientId].sort().join('_');
+            
+            const msgBox = document.getElementById('messagesBox');
+            msgBox.innerHTML = '';
+
+            if (unsubscribe) unsubscribe(); // Отключаем старый чат
+
+            // Подписываемся на сообщения в этом чате
+            unsubscribe = db.collection('chats').doc(chatId).collection('messages')
+                .orderBy('time', 'asc')
+                .onSnapshot(snap => {
+                    msgBox.innerHTML = '';
+                    snap.forEach(doc => {
+                        const m = doc.data();
+                        const div = document.createElement('div');
+                        div.className = `msg ${m.sender === currentUser.uid ? 'sent' : 'received'}`;
+                        div.innerText = m.text;
+                        msgBox.appendChild(div);
+                    });
+                    msgBox.scrollTop = msgBox.scrollHeight;
+                });
+        }
+
+        // 5. ОТПРАВКА СООБЩЕНИЯ
+        async function sendMsg() {
+            const text = document.getElementById('msgInput').value;
+            if (!text || !activeRecipientId) return;
+
+            const chatId = [currentUser.uid, activeRecipientId].sort().join('_');
+            
+            await db.collection('chats').doc(chatId).collection('messages').add({
+                sender: currentUser.uid,
+                text: text,
+                time: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            document.getElementById('msgInput').value = '';
+        }
+    </script>
 </body>
 </html>
