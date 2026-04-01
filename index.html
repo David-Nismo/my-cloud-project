@@ -3,186 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Cloud Chat (Firestore)</title>
+    <title>Private Cloud Chat - Supermega</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .hidden { display: none !important; }
-        
-        .auth-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        .auth-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 320px; text-align: center; margin-top: 50px; }
         input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px; }
-        
-        .main-wrapper { display: flex; gap: 20px; width: 100%; max-width: 900px; height: 85vh; }
-        
-        /* Список контактов */
-        .user-list { width: 260px; background: white; border-radius: 12px; padding: 15px; overflow-y: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .user-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; border-radius: 8px; margin-bottom: 5px; transition: 0.2s; }
-        .user-item:hover { background: #f0f7ff; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .main-wrapper { display: flex; gap: 20px; width: 100%; max-width: 900px; height: 80vh; margin-top: 20px; }
+        .user-list { width: 250px; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .user-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; border-radius: 8px; transition: 0.2s; margin-bottom: 5px; }
+        .user-item:hover { background: #e7f3ff; }
         .user-item.active { background: #007bff; color: white; }
-
-        /* Окно чата */
         .chat-area { flex: 1; background: white; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
-        .chat-header { padding: 15px; background: #fff; border-bottom: 1px solid #eee; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-        .messages { flex: 1; padding: 20px; overflow-y: auto; background: #fdfdfd; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 70%; padding: 10px 14px; border-radius: 15px; font-size: 14px; line-height: 1.4; }
-        .sent { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
-        .received { align-self: flex-start; background: #e4e6eb; color: #050505; border-bottom-left-radius: 2px; }
-        .logout-btn { background: #ff4d4d; width: auto; font-size: 11px; padding: 6px 12px; }
+        .chat-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .messages { flex: 1; padding: 15px; overflow-y: auto; background: #f9f9f9; display: flex; flex-direction: column; gap: 8px; }
+        .msg { max-width: 70%; padding: 8px 12px; border-radius: 12px; font-size: 14px; }
+        .sent { align-self: flex-end; background: #007bff; color: white; }
+        .received { align-self: flex-start; background: #e4e6eb; }
+        .header-info { background: white; width: 100%; max-width: 900px; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
 
+    <div id="userInfoHeader" class="header-info hidden">
+        <div>
+            <strong id="currentUserNameDisplay">Загрузка...</strong><br>
+            <small style="color: #666;">Проект: supermega-chat | PaaS</small>
+        </div>
+        <button onclick="firebase.auth().signOut()" style="width: auto; background: #ff4d4d; padding: 5px 15px;">Выйти</button>
+    </div>
+
     <div id="authBlock" class="auth-container">
-        <h2 style="margin-top:0">Вход / Регистрация</h2>
-        <input type="text" id="regName" placeholder="Имя (только для регистрации)">
+        <h3>Вход в систему</h3>
+        <input type="text" id="regName" placeholder="Ваше Имя (для регистрации)">
         <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Пароль">
         <button onclick="handleAuth('login')">Войти</button>
-        <button onclick="handleAuth('register')" style="background: #28a745;">Создать аккаунт</button>
+        <button onclick="handleAuth('register')" style="background: #28a745; margin-top: 10px;">Зарегистрироваться</button>
     </div>
 
     <div id="mainBlock" class="main-wrapper hidden">
         <div class="user-list">
-            <h3 style="font-size:16px; margin-top:0">Собеседники</h3>
+            <h4 style="margin-top:0">Контакты</h4>
             <div id="usersContent"></div>
         </div>
-
         <div class="chat-area">
-            <div class="chat-header">
-                <span id="targetUserName">Выберите, кому написать</span>
-                <button class="logout-btn" onclick="firebase.auth().signOut()">Выйти</button>
-            </div>
+            <div class="chat-header" id="chatHeaderTitle">Выберите собеседника</div>
             <div class="messages" id="messagesBox"></div>
-            <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
-                <input type="text" id="msgInput" placeholder="Напишите сообщение..." style="margin:0">
-                <button onclick="sendMsg()" style="width: 70px; margin:0">Отпр.</button>
+            <div style="padding: 15px; display: flex; gap: 10px; border-top: 1px solid #eee;">
+                <input type="text" id="msgInput" placeholder="Введите сообщение..." style="margin:0">
+                <button onclick="sendMsg()" style="width: 80px;">➤</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ТВОИ ДАННЫЕ ИЗ FIREBASE CONSOLE
+        // ТВОИ КЛЮЧИ ИЗ СКРИНШОТА
         const firebaseConfig = {
-  apiKey: "AIzaSyDKwJFpO7azezxQasLvD4GtkUA8Vjb9JFc",
-  authDomain: "supermega-chat.firebaseapp.com",
-  projectId: "supermega-chat",
-  storageBucket: "supermega-chat.firebasestorage.app",
-  messagingSenderId: "478100974184",
-  appId: "1:478100974184:web:f804e7993e4ebedef8e9dd",
-  measurementId: "G-YJ1C22FHWS"
-};
+            apiKey: "AIzaSyDKWJFp07azezxQasLvD4GtkUA8Vjb9JFc",
+            authDomain: "supermega-chat.firebaseapp.com",
+            projectId: "supermega-chat",
+            storageBucket: "supermega-chat.firebasestorage.app",
+            messagingSenderId: "478100974184",
+            appId: "1:478100974184:web:f804e7993e4ebedef8e9dd",
+            measurementId: "G-YJ1C22FHWS"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
-        const db = firebase.firestore(); // РАБОТАЕМ С FIRESTORE
+        const db = firebase.firestore();
 
         let currentUser = null;
         let activeRecipientId = null;
-        let unsubscribe = null; // Для остановки прослушивания старого чата
+        let unsubMessages = null;
 
-        // 1. АВТОРИЗАЦИЯ
         async function handleAuth(type) {
             const mail = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
             const name = document.getElementById('regName').value;
-
             try {
                 if (type === 'register') {
                     const res = await auth.createUserWithEmailAndPassword(mail, pass);
-                    // Сохраняем имя пользователя в Firestore
-                    await db.collection('users').doc(res.user.uid).set({
-                        name: name,
-                        email: mail,
-                        uid: res.user.uid
-                    });
+                    await db.collection('users').doc(res.user.uid).set({ name: name, uid: res.user.uid });
                 } else {
                     await auth.signInWithEmailAndPassword(mail, pass);
                 }
-            } catch (e) { alert(e.message); }
+            } catch (e) { alert("Ошибка: " + e.message); }
         }
 
-        // 2. КОНТРОЛЬ СОСТОЯНИЯ (ВШЕЛ/ВЫШЕЛ)
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
                 document.getElementById('authBlock').classList.add('hidden');
                 document.getElementById('mainBlock').classList.remove('hidden');
-                loadUsersList();
+                document.getElementById('userInfoHeader').classList.remove('hidden');
+                
+                db.collection('users').doc(user.uid).get().then(doc => {
+                    document.getElementById('currentUserNameDisplay').innerText = doc.data()?.name || user.email;
+                });
+                loadUsers();
             } else {
                 document.getElementById('authBlock').classList.remove('hidden');
                 document.getElementById('mainBlock').classList.add('hidden');
-                if (unsubscribe) unsubscribe();
+                document.getElementById('userInfoHeader').classList.add('hidden');
             }
         });
 
-        // 3. ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ
-        function loadUsersList() {
+        function loadUsers() {
             db.collection('users').onSnapshot(snap => {
-                const container = document.getElementById('usersContent');
-                container.innerHTML = '';
+                const list = document.getElementById('usersContent');
+                list.innerHTML = '';
                 snap.forEach(doc => {
-                    const user = doc.data();
-                    if (user.uid !== currentUser.uid) {
-                        const div = document.createElement('div');
-                        div.className = 'user-item';
-                        div.innerText = user.name || user.email;
-                        div.onclick = () => {
-                            // Выделение активного
-                            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
-                            div.classList.add('active');
-                            startChat(user.uid, user.name);
-                        };
-                        container.appendChild(div);
+                    const u = doc.data();
+                    if (u.uid !== currentUser.uid) {
+                        const d = document.createElement('div');
+                        d.className = 'user-item';
+                        d.innerText = u.name;
+                        d.onclick = () => startChat(u.uid, u.name);
+                        list.appendChild(d);
                     }
                 });
             });
         }
 
-        // 4. ЗАПУСК ПРИВАТНОГО ЧАТА
-        function startChat(recipientId, recipientName) {
-            activeRecipientId = recipientId;
-            document.getElementById('targetUserName').innerText = recipientName;
+        function startChat(id, name) {
+            activeRecipientId = id;
+            document.getElementById('chatHeaderTitle').innerText = "Чат с: " + name;
+            const chatId = [currentUser.uid, id].sort().join('_');
+            const box = document.getElementById('messagesBox');
             
-            // Генерируем ID чата (всегда один и тот же для пары людей)
-            const chatId = [currentUser.uid, recipientId].sort().join('_');
-            
-            const msgBox = document.getElementById('messagesBox');
-            msgBox.innerHTML = '';
-
-            if (unsubscribe) unsubscribe(); // Отключаем старый чат
-
-            // Подписываемся на сообщения в этом чате
-            unsubscribe = db.collection('chats').doc(chatId).collection('messages')
-                .orderBy('time', 'asc')
-                .onSnapshot(snap => {
-                    msgBox.innerHTML = '';
-                    snap.forEach(doc => {
-                        const m = doc.data();
+            if (unsubMessages) unsubMessages();
+            unsubMessages = db.collection('chats').doc(chatId).collection('messages')
+                .orderBy('time', 'asc').onSnapshot(snap => {
+                    box.innerHTML = '';
+                    snap.forEach(mDoc => {
+                        const m = mDoc.data();
                         const div = document.createElement('div');
                         div.className = `msg ${m.sender === currentUser.uid ? 'sent' : 'received'}`;
                         div.innerText = m.text;
-                        msgBox.appendChild(div);
+                        box.appendChild(div);
                     });
-                    msgBox.scrollTop = msgBox.scrollHeight;
+                    box.scrollTop = box.scrollHeight;
                 });
         }
 
-        // 5. ОТПРАВКА СООБЩЕНИЯ
         async function sendMsg() {
-            const text = document.getElementById('msgInput').value;
-            if (!text || !activeRecipientId) return;
-
+            const txt = document.getElementById('msgInput').value;
+            if (!txt || !activeRecipientId) return;
             const chatId = [currentUser.uid, activeRecipientId].sort().join('_');
-            
             await db.collection('chats').doc(chatId).collection('messages').add({
                 sender: currentUser.uid,
-                text: text,
+                text: txt,
                 time: firebase.firestore.FieldValue.serverTimestamp()
             });
-            
             document.getElementById('msgInput').value = '';
         }
     </script>
